@@ -16,23 +16,25 @@ public class MultiDimensionalInt
     }
 }
 
-
 public class GridControl : MonoBehaviour {
 
 
-    int cols;
-    int rows;
+    int cols = 0;
+    int rows = 0;
 
     public GameObject cellPrefab;
 
     public Cell[] cells;// = new Cell[M, N];
-    public int[] grid;
+    public float[] grid;
     public int speed;
 
     // Use this for initialization
     void Start()
     {
-        Load("test2");
+        Load("test20");
+
+        Shader.SetGlobalInt("cols", cols);
+        Shader.SetGlobalInt("rows", rows);
 
         int M = cols;
         int N = rows;
@@ -44,10 +46,12 @@ public class GridControl : MonoBehaviour {
             {
                 GameObject go = Instantiate(cellPrefab, new Vector3(i, 0, j), Quaternion.identity);
                 cells[i*N+j] = go.GetComponent<Cell>();
-                cells[i*N+j].SetAlive(grid[i*N+j]);
+                cells[i*N+j].SetAlive((int)grid[i*N+j]);
             }
             //cells[i,j] = new Cell(i,j);
         }
+
+        Shader.SetGlobalFloatArray("pixelsInfo", grid);
 
         InvokeRepeating("nextGeneration", 2.0f, 0.3f);
     }
@@ -68,11 +72,11 @@ public class GridControl : MonoBehaviour {
                 int aliveNeighbours = 0;
                 for (int i = -1; i <= 1; i++)
                     for (int j = -1; j <= 1; j++)
-                        aliveNeighbours += grid[(l+i)*N + m+j];
+                        aliveNeighbours += (int)grid[(l+i)*N + m+j];
 
                 // The cell needs to be subtracted from
                 // its neighbours as it was counted before
-                aliveNeighbours -= grid[l*N+m];
+                aliveNeighbours -= (int)grid[l*N+m];
 
                 // Implementing the Rules of Life
 
@@ -90,7 +94,7 @@ public class GridControl : MonoBehaviour {
 
                 // Remains the same
                 else
-                    future[l, m] = grid[l * N + m];
+                    future[l, m] = (int)grid[l * N + m];
             }
         }
 
@@ -102,14 +106,20 @@ public class GridControl : MonoBehaviour {
                 cells[i*N+j].SetAlive(future[i,j]);
             }
         }
+
+        Shader.SetGlobalFloatArray("pixelsInfo", grid);
+        //cols = Shader.GetGlobalInt("cols");
+        //grid = Shader.GetGlobalFloatArray("pixelsInfo");
     }
-    
-// Update is called once per frame
+
+    // Update is called once per frame
+    [ExecuteInEditMode]
     void Update ()
     {
-       // Time.deltaTime;
-		
-	}
+        if ( cols == 0)
+        Shader.SetGlobalInt("cols", 0);
+
+    }
 
     //Load map file or use random ( with 20% uniform crowdness )
     public bool Load(string levelName)
@@ -130,7 +140,7 @@ public class GridControl : MonoBehaviour {
         if (Int32.TryParse(fLines[1], out rows))
             Console.WriteLine(rows);
 
-        grid = new int[cols * rows];
+        grid = new float[cols * rows];
 
         for (int i = 0; i < cols; i++)
         {
