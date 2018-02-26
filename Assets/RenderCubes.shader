@@ -7,7 +7,7 @@
 	SubShader
 	{
 		// No culling or depth
-		Cull Off ZWrite Off ZTest Always
+		// Cull Off ZWrite Off ZTest Always
 
 		Pass
 		{
@@ -36,6 +36,8 @@
 				o.uv = v.uv;
 				return o;
 			}
+
+			uniform int pixelsInfo[2500];
 			
 			sampler2D _MainTex;
 

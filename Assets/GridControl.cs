@@ -29,10 +29,11 @@ public class GridControl : MonoBehaviour {
     void Start()
     {
 
-        grid = new MultiDimensionalInt[10];
+        grid = new MultiDimensionalInt[M];
         for (int i = 0; i < M; i++)
         {
             grid[i] = new MultiDimensionalInt(N);
+            grid[i].intArray = new int[N];
         }
 
         grid[0].intArray = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
