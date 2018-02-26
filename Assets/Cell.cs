@@ -15,6 +15,7 @@ public class Cell : MonoBehaviour {
 
     public int x, y;
     public Cell[] neighbors;
+    public float t;
 
     public Cell(int x, int y)
     {
@@ -25,11 +26,13 @@ public class Cell : MonoBehaviour {
     {
         if ( alive != 0 )
         {
-            GetComponent<Renderer>().material = liveMat;
+            this.gameObject.SetActive(true);
+            // GetComponent<Renderer>().material = liveMat;
         }
         else
         {
-            GetComponent<Renderer>().material = deatMat;
+            //GetComponent<Renderer>().material = deatMat;
+            this.gameObject.SetActive(false);
         }
     }
 
