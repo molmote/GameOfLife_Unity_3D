@@ -1,6 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.IO;
+using System;
+
 
 [System.Serializable]
 public class MultiDimensionalInt
@@ -16,45 +19,32 @@ public class MultiDimensionalInt
 
 public class GridControl : MonoBehaviour {
 
-    int M = 10;
-    int N = 10;
+
+    int cols;
+    int rows;
 
     public GameObject cellPrefab;
 
-    public Cell[,] cells;// = new Cell[M, N];
-    public MultiDimensionalInt[] grid;
+    public Cell[] cells;// = new Cell[M, N];
+    public int[] grid;
     public int speed;
 
     // Use this for initialization
     void Start()
     {
+        Load("test2");
 
-        grid = new MultiDimensionalInt[M];
-        for (int i = 0; i < M; i++)
-        {
-            grid[i] = new MultiDimensionalInt(N);
-            grid[i].intArray = new int[N];
-        }
+        int M = cols;
+        int N = rows;
 
-        grid[0].intArray = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-        grid[1].intArray = new int[] { 0, 0, 0, 1, 1, 0, 0, 0, 0, 0 };
-        grid[2].intArray = new int[] { 0, 0, 0, 0, 1, 0, 0, 0, 0, 0 };
-        grid[3].intArray = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-        grid[4].intArray = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-        grid[5].intArray = new int[] { 0, 0, 0, 1, 1, 0, 0, 0, 0, 0 };
-        grid[6].intArray = new int[] { 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 };
-        grid[7].intArray = new int[] { 0, 0, 0, 0, 0, 1, 0, 0, 0, 0 };
-        grid[8].intArray = new int[] { 0, 0, 0, 0, 1, 0, 0, 0, 0, 0 };
-        grid[9].intArray = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-
-        cells = new Cell[M, N];
+        cells = new Cell[M*N];
         for ( int i = 0; i < M; i++)
         {
             for ( int j = 0; j < N; j++)
             {
                 GameObject go = Instantiate(cellPrefab, new Vector3(i, 0, j), Quaternion.identity);
-                cells[i, j] = go.GetComponent<Cell>();
-                cells[i, j].SetAlive(grid[i].intArray[j]);
+                cells[i*N+j] = go.GetComponent<Cell>();
+                cells[i*N+j].SetAlive(grid[i*N+j]);
             }
             //cells[i,j] = new Cell(i,j);
         }
@@ -64,6 +54,9 @@ public class GridControl : MonoBehaviour {
     //[ExecuteInEditMode]
     void nextGeneration()
     {
+        int M = cols;
+        int N = rows;
+
         int[,] future = new int[M, N];
 
         // Loop through every cell
@@ -75,29 +68,29 @@ public class GridControl : MonoBehaviour {
                 int aliveNeighbours = 0;
                 for (int i = -1; i <= 1; i++)
                     for (int j = -1; j <= 1; j++)
-                        aliveNeighbours += grid[l + i].intArray[m + j];
+                        aliveNeighbours += grid[(l+i)*N + m+j];
 
                 // The cell needs to be subtracted from
                 // its neighbours as it was counted before
-                aliveNeighbours -= grid[l].intArray[m];
+                aliveNeighbours -= grid[l*N+m];
 
                 // Implementing the Rules of Life
 
                 // Cell is lonely and dies
-                if ((grid[l].intArray[m] == 1) && (aliveNeighbours < 2))
+                if ((grid[l * N + m] == 1) && (aliveNeighbours < 2))
                     future[l, m] = 0;
 
                 // Cell dies due to over population
-                else if ((grid[l].intArray[m] == 1) && (aliveNeighbours > 3))
+                else if ((grid[l * N + m] == 1) && (aliveNeighbours > 3))
                     future[l, m] = 0;
 
                 // A new cell is born
-                else if ((grid[l].intArray[m] == 0) && (aliveNeighbours == 3))
+                else if ((grid[l * N + m] == 0) && (aliveNeighbours == 3))
                     future[l, m] = 1;
 
                 // Remains the same
                 else
-                    future[l, m] = grid[l].intArray[m];
+                    future[l, m] = grid[l * N + m];
             }
         }
 
@@ -105,17 +98,55 @@ public class GridControl : MonoBehaviour {
         {
             for (int j = 0; j < N; j++)
             {
-                grid[i].intArray[j] = future[i, j];
-                cells[i, j].SetAlive(future[i,j]);
+                grid[i*N+j] = future[i, j];
+                cells[i*N+j].SetAlive(future[i,j]);
             }
         }
     }
-
-    float elapsed;
+    
 // Update is called once per frame
-void Update ()
+    void Update ()
     {
        // Time.deltaTime;
 		
 	}
+
+    //Load map file or use random ( with 20% uniform crowdness )
+    public bool Load(string levelName)
+    {
+        TextAsset lvl = Resources.Load(levelName) as TextAsset;
+        Debug.Log(lvl.text);
+
+        string text = lvl.text;
+
+        string[] fs = new string[] { "\r\n", "\r", "\n" };
+        string[] fLines = text.Split(fs, StringSplitOptions.None);
+
+        
+        //read size of the map
+        if (Int32.TryParse(fLines[0], out cols))
+            Console.WriteLine(cols);
+        
+        if (Int32.TryParse(fLines[1], out rows))
+            Console.WriteLine(rows);
+
+        grid = new int[cols * rows];
+
+        for (int i = 0; i < cols; i++)
+        {
+            for (int j = 0; j < rows; j++)
+            {
+                grid[i * cols + j] = fLines[i+2][j] - '0';
+            }
+
+            Debug.Log(fLines[i+2] + "\n");
+            //string valueLine = fLines[i];
+            //string[] values = Regex.Split(valueLine, ";"); // your splitter here
+
+            //Spell newSpell = new Spell(values[0], ... ) // etc
+            //return newSpell;
+        }
+
+        return true;
+    }
 }
