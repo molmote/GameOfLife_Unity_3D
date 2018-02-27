@@ -18,6 +18,7 @@ public class MultiDimensionalInt
 
 public class GridControl : MonoBehaviour {
 
+    public bool is3D;
 
     int cols = 0;
     int rows = 0;
@@ -34,7 +35,7 @@ public class GridControl : MonoBehaviour {
     // Use this for initialization
     void Start()
     {
-        Load("test20");
+        Load("SmallExp_20");
 
         Shader.SetGlobalInt("cols", cols);
         Shader.SetGlobalInt("rows", rows);
@@ -61,11 +62,70 @@ public class GridControl : MonoBehaviour {
         }
 
         /// Shader.SetGlobalFloatArray("pixelsInfo", grid);
+        if (is3D)
+            InvokeRepeating("nextGeneration3D", 1.0f, 0.3f);
+        else
+            InvokeRepeating("nextGeneration", 1.0f, 0.3f);
 
-        InvokeRepeating("nextGeneration", 2.0f, 0.3f);
     }
-    //[ExecuteInEditMode]
+
+
     void nextGeneration()
+    {
+        int M = cols;
+        int N = rows;
+        int H = 1;
+        int n = 0;
+
+        int[,,] future = new int[M, N, H];
+
+        // Loop through every cell
+        for (int l = 1; l < M - 1; l++)
+        {
+            for (int m = 1; m < N - 1; m++)
+            {
+                // finding no Of Neighbours that are alive
+                int aliveNeighbours = 0;
+                for (int i = -1; i <= 1; i++)
+                    for (int j = -1; j <= 1; j++)
+                            aliveNeighbours += (int)grid[l + i, m + j, n];
+
+                // The cell needs to be subtracted from
+                // its neighbours as it was counted before
+                aliveNeighbours -= (int)grid[l, m, n];
+
+                // Implementing the Rules of Life
+
+                // Cell is lonely and dies
+                if ((grid[l, m, n] == 1) && (aliveNeighbours < 2))
+                    future[l, m, n] = 0;
+
+                // Cell dies due to over population
+                else if ((grid[l, m, n] == 1) && (aliveNeighbours > 3))
+                    future[l, m, n] = 0;
+
+                // A new cell is born
+                else if ((grid[l, m, n] == 0) && (aliveNeighbours == 3))
+                    future[l, m, n] = 1;
+
+                // Remains the same
+                else
+                    future[l, m, n] = (int)grid[l, m, n];
+            }
+        }
+
+        for (int i = 0; i < M; i++)
+        {
+            for (int j = 0; j < N; j++)
+            {
+                grid[i, j, 0] = future[i, j, 0];
+                cells[i, j, 0].SetAlive(future[i, j, 0]);
+            }
+        }
+        
+    }
+
+    void nextGeneration3D()
     {
         int M = cols;
         int N = rows;
@@ -136,7 +196,6 @@ public class GridControl : MonoBehaviour {
     {
         if ( cols == 0)
         Shader.SetGlobalInt("cols", 0);
-
     }
 
     //Load map file or use random ( with 20% uniform crowdness )
@@ -165,17 +224,15 @@ public class GridControl : MonoBehaviour {
             for (int j = 0; j < rows; j++)
             {
                 //for (int k = 0; k < 10; k++)
+                if ( is3D )
                 {
                     grid[i, j, depth/2] = fLines[i + 2][j] - '0';
                 }
+                else
+                {
+                    grid[i, j, 0] = fLines[i + 2][j] - '0';
+                }
             }
-
-            //Debug.Log(fLines[i+2] + "\n");
-            //string valueLine = fLines[i];
-            //string[] values = Regex.Split(valueLine, ";"); // your splitter here
-
-            //Spell newSpell = new Spell(values[0], ... ) // etc
-            //return newSpell;
         }
 
         return true;
