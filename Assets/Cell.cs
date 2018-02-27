@@ -3,24 +3,14 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class Cell : MonoBehaviour {
+    
+    //public bool isAliveNextFrame;
+    //[SerializeField]private Material liveMat;
+    //[SerializeField]private Material deatMat;
+    //public Cell[] neighbors;
 
-    public bool isAlive {
-        get { return isAlive; }
-        set { isAlive = value; }
-    }
-    public bool isAliveNextFrame;
-
-    [SerializeField]private Material liveMat;
-    [SerializeField]private Material deatMat;
-
-    public int x, y;
-    public Cell[] neighbors;
-    public float t;
-
-    public Cell(int x, int y)
-    {
-        transform.position = new Vector3(x, y, 0);
-    }
+    //public int x, y;
+    //public float t;
 
     public void SetAlive(int alive)
     {

@@ -4,18 +4,7 @@ using UnityEngine;
 using System.IO;
 using System;
 
-
-[System.Serializable]
-public class MultiDimensionalInt
-{
-    public int[] intArray; // bool, could be color
-
-    public MultiDimensionalInt(int range)
-    {
-        //intArray = new int[range];
-    }
-}
-
+// [ExecuteInEditMode]
 public class GridControl : MonoBehaviour {
 
     public bool is3D;
@@ -25,51 +14,68 @@ public class GridControl : MonoBehaviour {
     int depth = 10;
 
     public GameObject cellPrefab;
+    public TextAsset mapToLoad;
 
-    //public Cell[] cells;// = new Cell[M, N];
     public Cell[,,] cells;
-    //public float[] grid;
     public int[,,] grid;
-    public int speed;
+    public float refreshInterval = 0.3f;
 
-    // Use this for initialization
-    void Start()
+    private void Reset()
     {
-        Load("SmallExp_20");
-
-        Shader.SetGlobalInt("cols", cols);
-        Shader.SetGlobalInt("rows", rows);
+        CancelInvoke();
 
         int M = cols;
         int N = rows;
         int H = depth;
 
-        ///cells = new Cell[M*N];
-        cells = new Cell[M, N, H];
-        for ( int i = 0; i < M; i++)
+        for (int i = 0; i < M; i++)
         {
-            for ( int j = 0; j < N; j++)
+            for (int j = 0; j < N; j++)
             {
                 for (int k = 0; k < H; k++)
                 {
-                    GameObject go = Instantiate(cellPrefab, new Vector3(i, k, j), Quaternion.identity);
-///cells[i * N + j] = go.GetComponent<Cell>();
-                   ///cells[i * N + j].SetAlive((int)grid[i * N + j]);
-                    cells[i,j,k] = go.GetComponent<Cell>();
-                    cells[i, j, k].SetAlive(grid[i, j, k]);
+                    cells[i, j, k].SetAlive(0);
                 }
             }
         }
 
-        /// Shader.SetGlobalFloatArray("pixelsInfo", grid);
+        LoadSelectedMap(mapToLoad);
+        
+        M = cols;
+        N = rows;
+        depth = 10;
+
+        Shader.SetGlobalInt("cols", cols);
+        Shader.SetGlobalInt("rows", rows);
+        
+        cells = new Cell[M, N, H];
+        for (int i = 0; i < M; i++)
+        {
+            for (int j = 0; j < N; j++)
+            {
+                for (int k = 0; k < H; k++)
+                {
+                    GameObject go = Instantiate(cellPrefab, new Vector3(i - M/2, k, j - N/2), Quaternion.identity);
+
+                    cells[i, j, k] = go.GetComponent<Cell>();
+                    cells[i, j, k].SetAlive(grid[i, j, k]);
+                }
+            }
+        }
+        
         if (is3D)
-            InvokeRepeating("nextGeneration3D", 1.0f, 0.3f);
+            InvokeRepeating("nextGeneration3D", 1.0f, refreshInterval);
         else
-            InvokeRepeating("nextGeneration", 1.0f, 0.3f);
+            InvokeRepeating("nextGeneration", 1.0f, refreshInterval);
+
 
     }
 
-
+    void Start()
+    {
+        Reset();
+    }
+    
     void nextGeneration()
     {
         int M = cols;
@@ -124,7 +130,11 @@ public class GridControl : MonoBehaviour {
         }
         
     }
-
+    int[,] offsets = {
+{-1,-1,-1},{-1,-1,0},{-1,-1,1},{-1,0,-1},{-1,0,0},{-1,0,1},{-1,1,-1},{-1,1,0},{-1,1,1},
+{0,-1,-1},{0,-1,0},{0,-1,1},{0,0,-1},{0,0,0},{0,0,1},{0,1,-1},{0,1,0},{0,1,1},
+{1,-1,-1},{1,-1,0},{1,-1,1},{1,0,-1},{1,0,0},{1,0,1},{1,1,-1},{1,1,0},{1,1,1}};
+    
     void nextGeneration3D()
     {
         int M = cols;
@@ -142,11 +152,13 @@ public class GridControl : MonoBehaviour {
                 {
                     // finding no Of Neighbours that are alive
                     int aliveNeighbours = 0;
-                    for (int i = -1; i <= 1; i++)
-                        for (int j = -1; j <= 1; j++)
-                            for ( int k = -1; k <= 1; k++)
-                            aliveNeighbours += (int)grid[l + i, m + j, n+k];
-                    //aliveNeighbours += (int)grid[(l+i)*N + m+j];
+                    for ( int off = 0; off < 27; off++ )
+                    {
+                        int i = offsets[off, 0];
+                        int j = offsets[off, 1];
+                        int k = offsets[off, 2];
+                        aliveNeighbours += (int)grid[l + i, m + j, n + k];
+                    }
 
                     // The cell needs to be subtracted from
                     // its neighbours as it was counted before
@@ -154,21 +166,31 @@ public class GridControl : MonoBehaviour {
 
                     // Implementing the Rules of Life
 
+                    bool alive = (grid[l, m, n] == 1);
+
                     // Cell is lonely and dies
-                    if ((grid[l, m, n] == 1) && (aliveNeighbours < 2))
+                    if (alive && (aliveNeighbours < 2))
+                    {
                         future[l, m, n] = 0;
+                    }
 
                     // Cell dies due to over population
-                    else if ((grid[l, m, n] == 1) && (aliveNeighbours > 3))
+                    else if (alive && (aliveNeighbours > 3))
+                    {
                         future[l, m, n] = 0;
+                    }
 
                     // A new cell is born
-                    else if ((grid[l, m, n] == 0) && (aliveNeighbours == 3))
+                    else if (!alive && (aliveNeighbours == 3))
+                    {
                         future[l, m, n] = 1;
+                    }
 
                     // Remains the same
                     else
+                    {
                         future[l, m, n] = (int)grid[l, m, n];
+                    }
                 }
             }
         }
@@ -184,49 +206,32 @@ public class GridControl : MonoBehaviour {
                 }
             }
         }
-
-        /// Shader.SetGlobalFloatArray("pixelsInfo", grid);
-        //cols = Shader.GetGlobalInt("cols");
-        //grid = Shader.GetGlobalFloatArray("pixelsInfo");
     }
 
-    // Update is called once per frame
-    [ExecuteInEditMode]
-    void Update ()
+    public void LoadSelectedMap(TextAsset lvl)
     {
-        if ( cols == 0)
-        Shader.SetGlobalInt("cols", 0);
-    }
-
-    //Load map file or use random ( with 20% uniform crowdness )
-    public bool Load(string levelName)
-    {
-        TextAsset lvl = Resources.Load(levelName) as TextAsset;
-        Debug.Log(lvl.text);
-
         string text = lvl.text;
 
         string[] fs = new string[] { "\r\n", "\r", "\n" };
         string[] fLines = text.Split(fs, StringSplitOptions.None);
-
-
+        
         //read size of the map
         if (Int32.TryParse(fLines[0], out cols)) { }
-          //  Console.WriteLine(cols);
-        
-        if (Int32.TryParse(fLines[1], out rows)) { }
-          //  Console.WriteLine(rows);
+        //  Console.WriteLine(cols);
 
-        grid = new int[cols , rows , depth];
+        if (Int32.TryParse(fLines[1], out rows)) { }
+        //  Console.WriteLine(rows); 
+
+        grid = new int[cols, rows, depth];
 
         for (int i = 0; i < cols; i++)
         {
             for (int j = 0; j < rows; j++)
             {
                 //for (int k = 0; k < 10; k++)
-                if ( is3D )
+                if (is3D)
                 {
-                    grid[i, j, depth/2] = fLines[i + 2][j] - '0';
+                    grid[i, j, depth / 2] = fLines[i + 2][j] - '0';
                 }
                 else
                 {
@@ -234,7 +239,13 @@ public class GridControl : MonoBehaviour {
                 }
             }
         }
+    }
+    //Load map file or use random ( with 20% uniform crowdness )
+    public void Load(string levelName)
+    {
+        TextAsset lvl = Resources.Load(levelName) as TextAsset;
+        Debug.Log(lvl.text);
 
-        return true;
+        LoadSelectedMap(lvl);
     }
 }
